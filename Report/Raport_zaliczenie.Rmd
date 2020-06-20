@@ -1,0 +1,86 @@
+---
+title: "Analiza liczby rozwodów w zależności od wynagrodzenia, sekcji zawodowej oraz wykształcenia."
+author: "Natalia Orzechowska, Alicja Lisiecka"
+date: "20 czerwca 2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Wczytywanie i przygotowanie danych
+Dane, które zostały wykorzystane do analizy ochodzą z Banku Danych Lokalnych. Przedstawiają one liczbę rozwodów w poszczególnych powiatach, liczę pracujących według grup sekcji i płci, przeciętne miesięczne wynagrodzenie brutto w relacji do średniej krajowej (Polska=100) oraz liczbę absolwentów uczelni wyższych. Wszystkie dane pochodzą z 2018 roku.
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(sf)
+library(corrplot)
+library(Hmisc)
+```
+
+```{r}
+# wczytanie danych
+
+powiaty <- st_read( dsn = 'C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/PRG_jednostki_administracyjne_v40_SZPRG/Powiaty.shp' )
+
+y_rozwody <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/rozwody.xlsx', sheet = 2)
+
+x_wynagrodzenie <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/wynagrodzenie.xlsx', sheet = 2)
+x_pracujacy_sekcje <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/pracujacy_sekcje.xlsx', sheet = 2)
+x_absolwenci <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/absolwenci.xlsx', sheet = 2)
+
+```
+
+```{r}
+# podgląd załadowanych danych
+
+View(y_rozwody)
+View(x_pracujacy_sekcje)
+View(x_wynagrodzenie)
+```
+
+
+```{r}
+powiaty$JPT_KOD_JE <- paste0(powiaty$JPT_KOD_JE,'000')
+
+head(powiaty$JPT_KOD_JE)
+x_wynagrodzenie$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100)`
+
+```
+
+
+
+```{r}
+# łączenie
+first_df <- left_join(y_rozwody,select(x_wynagrodzenie,Kod,`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100)`) , by = "Kod")
+
+View(first_df)
+
+second_df <- left_join(first_df,x_pracujacy_sekcje,by = "Kod")
+
+View(second_df)
+```
+
+
+
+```{r}
+# usuwanie kolumny 
+second_df$Nazwa.y <- NULL
+
+View(second_df)
+
+second_df <- second_df[!is.na(second_df$Kod),]
+second_df <- rename(second_df,ilosc_rozwodow = ogółem)
+
+View(second_df)
+```
+
+
+
+
+
