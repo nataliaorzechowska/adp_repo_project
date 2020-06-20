@@ -1,19 +1,12 @@
 ---
-title: "Analiza liczby rozwodów w zależności od wynagrodzenia, sekcji zawodowej oraz wykształcenia."
+title: "Analiza liczby rozwodów w poszczególnych powiatch."
 author: "Natalia Orzechowska, Alicja Lisiecka"
-date: "20 czerwca 2020"
+date: "16 czerwca 2020"
 output: html_document
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-## Wczytywanie i przygotowanie danych
-Dane, które zostały wykorzystane do analizy ochodzą z Banku Danych Lokalnych. Przedstawiają one liczbę rozwodów w poszczególnych powiatach, liczę pracujących według grup sekcji i płci, przeciętne miesięczne wynagrodzenie brutto w relacji do średniej krajowej (Polska=100) oraz liczbę absolwentów uczelni wyższych. Wszystkie dane pochodzą z 2018 roku.
-
-```{r}
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
@@ -23,61 +16,175 @@ library(corrplot)
 library(Hmisc)
 ```
 
+# Wczytanie danych
+
+Dane, które zostały wykorzystane do przeprowadzenia analizy pochodzą z Banku Danych Lokalnych. Dane przedstawiają ilość rozwodów wg powiatów, liczbę pracujących wg grup sekcji i płci w powiatach, liczbę absolwentów uczelni wyższych wg powiatów oraz przeciętne miesięczne wynagrodzenie brutto w relacji do średniej krajowej. Wszystkie dane pochodzą z 2018  roku. W niniejszym raporcie zostanie podjęta próba znalezienia odpowiedzi na pytanie, czy liczba rozwodów zależy od wynagrodzenia, sekcji zawodowej oraz liczby absolwentów (sugerując, że osoba jest wykształcona).
+
+
 ```{r}
-# wczytanie danych
-
 powiaty <- st_read( dsn = 'C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/PRG_jednostki_administracyjne_v40_SZPRG/Powiaty.shp' )
-
 y_rozwody <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/rozwody.xlsx', sheet = 2)
-
 x_wynagrodzenie <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/wynagrodzenie.xlsx', sheet = 2)
 x_pracujacy_sekcje <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/pracujacy_sekcje.xlsx', sheet = 2)
 x_absolwenci <- readxl::read_xlsx('C:/Users/Alicja/Desktop/Dane projekt zaliczeniowy/absolwenci.xlsx', sheet = 2)
-
-```
-
-```{r}
-# podgląd załadowanych danych
-
 View(y_rozwody)
 View(x_pracujacy_sekcje)
-View(x_wynagrodzenie)
-```
-
-
-```{r}
 powiaty$JPT_KOD_JE <- paste0(powiaty$JPT_KOD_JE,'000')
-
 head(powiaty$JPT_KOD_JE)
 x_wynagrodzenie$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100)`
-
 ```
 
 
+# Przygotowanie danych
 
+W pierwszej kolejności trzeba połączyć dane i usunąć nieporzebne kolumny.
 ```{r}
-# łączenie
+#łączenie
 first_df <- left_join(y_rozwody,select(x_wynagrodzenie,Kod,`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100)`) , by = "Kod")
-
 View(first_df)
-
 second_df <- left_join(first_df,x_pracujacy_sekcje,by = "Kod")
-
 View(second_df)
-```
-
-
-
-```{r}
 # usuwanie kolumny 
 second_df$Nazwa.y <- NULL
-
 View(second_df)
-
 second_df <- second_df[!is.na(second_df$Kod),]
 second_df <- rename(second_df,ilosc_rozwodow = ogółem)
-
 View(second_df)
+third_df <- left_join(second_df,x_wynagrodzenie, by = "Kod")
+View(third_df)
+third_df$Nazwa <- NULL
+View(third_df)
+fourth_df <- left_join(third_df,x_absolwenci, by = "Kod")
+View(fourth_df)
+fourth_df$Nazwa <- NULL
+View(fourth_df)
+final_df <- powiaty %>% left_join(fourth_df, by = c ( 'JPT_KOD_JE' = 'Kod'))
+final_df %>% summary()
+final_df <- rename(final_df,przecietne_miesieczne_wynagrodzenie = `przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).y`)
+```
+
+
+
+Podgląd danych:
+```{r}
+dane_bez_sf <- fourth_df
+summary(dane_bez_sf)
+```
+
+
+Następnie należy przekonwertować dane z tekstu na liczby:
+```{r}
+# z tekstu na liczby
+dane_bez_sf$ilosc_rozwodow = as.numeric(as.character(dane_bez_sf$ilosc_rozwodow ))
+dane_bez_sf$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).x` = 
+  as.numeric(as.character(dane_bez_sf$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).x` ))
+dane_bez_sf$`rolnictwo, leśnictwo, łowiectwo i rybactwo` = as.numeric(as.character(dane_bez_sf$`rolnictwo, leśnictwo, łowiectwo i rybactwo`))
+dane_bez_sf$`przemysł i budownictwo` = as.numeric(as.character(dane_bez_sf$`przemysł i budownictwo` ))
+dane_bez_sf$`handel; naprawa pojazdów samochodowych; transport i gospodarka magazynowa; zakwaterowanie i gastronomia; informacja i komunikacja` = 
+  as.numeric(as.character(dane_bez_sf$`handel; naprawa pojazdów samochodowych; transport i gospodarka magazynowa; zakwaterowanie i gastronomia; informacja i komunikacja`))
+dane_bez_sf$`działalność finansowa i ubezpieczeniowa; obsługa rynku nieruchomości` = 
+  as.numeric(as.character(dane_bez_sf$`działalność finansowa i ubezpieczeniowa; obsługa rynku nieruchomości`)) 
+dane_bez_sf$`pozostałe usługi` = as.numeric(as.character(dane_bez_sf$`pozostałe usługi`)) 
+dane_bez_sf$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).y` = 
+  as.numeric(as.character(dane_bez_sf$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).y`)) 
+dane_bez_sf$`absolwenci ogółem` = as.numeric(as.character(dane_bez_sf$`absolwenci ogółem`))
+```
+
+
+
+
+# Wizualizacja danych
+
+```{r}
+#zastąpienie braków w danych mediana z kolumny 
+#mediany <- lapply(dane_bez_sf, 0 , na.rm = TRUE)
+dane_bez_sf[is.na(dane_bez_sf)] <-0
+dane_bez_sf <- dane_bez_sf %>%
+  rename(rozw = ilosc_rozwodow,
+         wynag =`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).x`,
+         rolnic = `rolnictwo, leśnictwo, łowiectwo i rybactwo`,
+         przem = `przemysł i budownictwo`,
+         handel = `handel; naprawa pojazdów samochodowych; transport i gospodarka magazynowa; zakwaterowanie i gastronomia; informacja i komunikacja`,
+         finans = `działalność finansowa i ubezpieczeniowa; obsługa rynku nieruchomości`,
+         poz_usl = `pozostałe usługi`,
+         absol =  `absolwenci ogółem`)
+dane_bez_sf$`przeciętne miesięczne wynagrodzenia brutto w relacji do średniej krajowej (Polska=100).y` <- NULL
+View(dane_bez_sf)
+```
+
+
+
+Poniżej przedstawiona jest macierz korelacji, która pokazuje związek pomiędzy poszczególnymi zmiennymi.
+
+```{r}
+# macierz korelacji 
+macierz_korelacji <-cor(dane_bez_sf[sapply(dane_bez_sf,is.numeric)])
+corrplot(macierz_korelacji,method="color")
+# duza dodatnia korelacja miedzy liczba rozwodow a iloscia absolwentów
+# mała dodatnia korelacja miedzy liczbą rozwodów a wynagrodzeniem 
+# mała dodatnia korelacja miedzy liczba absolwentow a wynagrodzeniem
+# mała dodatnia korelacja miedzy praca w finansach a wynagrodzeniem
+```
+
+
+
+
+Poniżej wyliczone zostały podstawowe statystki dla badanego zbioru danych:
+```{r}
+dane_z_sf <-  powiaty %>% left_join(dane_bez_sf, by = c ( 'JPT_KOD_JE' = 'Kod'))
+summary(dane_z_sf)
+```
+
+
+
+```{r}
+# rozwody w powiatach 
+ggplot(dane_z_sf,aes(fill = rozw )) + geom_sf()+
+  scale_fill_gradient( low = 'white' ,  high = 'red')
+dane_z_sf %>%
+  arrange(desc(rozw))%>%
+  select(rozw, Nazwa.x)
+```
+Powyższy wykres przedstawia powiaty o największej oraz najmniejszej liczbie rozwodów w danym powiecie. Z wykresu wynika, że najwięcej rozwodów odnotowano w powiecie m. st. Warszawa (3.594). Na drugim miejscu jest powiat m. Wrocław (1.427) i na trzecim powiat m. Kraków (1.367). Najmniej odnotowano w powiecie łosickim (27).
+
+
+
+
+```{r}
+#wynagrodzenie w powiatach 
+ggplot(dane_z_sf,aes(fill = wynag )) + geom_sf()+
+  scale_fill_gradient( low = 'white' ,  high = 'dark green')
+```
+
+
+```{r}
+#ilość absolwentów
+ggplot(dane_z_sf,aes(fill = absol )) + geom_sf()+
+  scale_fill_gradient( low = 'white' ,  high = 'dark blue')
+```
+
+
+
+```{r}
+# srednie zarobki w wojewodztwie
+
+srednie_zarobki_wojewodztwa <- dane_bez_sf %>% group_by(wojewodztwo) %>%
+  summarise(srednie_zarobki = mean(wynag))
+
+View(srednie_zarobki_wojewodztwa)
+
+ggplot(dane_bez_sf,aes(wojewodztwo))+
+  geom_bar() + 
+  ylab("Rozwody")+
+  theme(axis.text.x=element_text(angle =- 90, vjust = 0.5))
+
+ggplot(srednie_zarobki_wojewodztwa,aes(wojewodztwo,srednie_zarobki,group =1)) +
+  geom_point(aes(y = srednie_zarobki_wojewodztwa$srednie_zarobki))+
+  geom_line()+
+  ylab("Średnie zarobki")+
+  theme(axis.text.x=element_text(angle =- 90, vjust = 0.5))
+
+
 ```
 
 
