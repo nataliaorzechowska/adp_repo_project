@@ -93,7 +93,7 @@ dane_bez_sf$`absolwenci ogółem` = as.numeric(as.character(dane_bez_sf$`absolwe
 
 
 
-# Wizualizacja danych
+
 
 ```{r}
 #zastąpienie braków w danych mediana z kolumny 
@@ -114,20 +114,7 @@ View(dane_bez_sf)
 
 
 
-Poniżej przedstawiona jest macierz korelacji, która pokazuje związek pomiędzy poszczególnymi zmiennymi.
-
-```{r}
-# macierz korelacji 
-macierz_korelacji <-cor(dane_bez_sf[sapply(dane_bez_sf,is.numeric)])
-corrplot(macierz_korelacji,method="color")
-# duza dodatnia korelacja miedzy liczba rozwodow a iloscia absolwentów
-# mała dodatnia korelacja miedzy liczbą rozwodów a wynagrodzeniem 
-# mała dodatnia korelacja miedzy liczba absolwentow a wynagrodzeniem
-# mała dodatnia korelacja miedzy praca w finansach a wynagrodzeniem
-```
-
-
-
+# Wizualizacja danych
 
 Poniżej wyliczone zostały podstawowe statystki dla badanego zbioru danych:
 ```{r}
@@ -137,6 +124,8 @@ summary(dane_z_sf)
 
 
 
+Poniższy wykres przedstawia powiaty o największej oraz najmniejszej liczbie rozwodów w danym powiecie. Z wykresu wynika, że najwięcej rozwodów odnotowano w powiecie m. st. Warszawa (3.594). Na drugim miejscu jest powiat m. Wrocław (1.427) i na trzecim powiat m. Kraków (1.367). Najmniej odnotowano w powiecie łosickim (27).
+
 ```{r}
 # rozwody w powiatach 
 ggplot(dane_z_sf,aes(fill = rozw )) + geom_sf()+
@@ -145,16 +134,33 @@ dane_z_sf %>%
   arrange(desc(rozw))%>%
   select(rozw, Nazwa.x)
 ```
-Powyższy wykres przedstawia powiaty o największej oraz najmniejszej liczbie rozwodów w danym powiecie. Z wykresu wynika, że najwięcej rozwodów odnotowano w powiecie m. st. Warszawa (3.594). Na drugim miejscu jest powiat m. Wrocław (1.427) i na trzecim powiat m. Kraków (1.367). Najmniej odnotowano w powiecie łosickim (27).
 
 
 
 
+
+
+Poniższy wykres przedstawia przeciętne wynagrodzenie brutto w relacji do średniej krajowej.
 ```{r}
 #wynagrodzenie w powiatach 
 ggplot(dane_z_sf,aes(fill = wynag )) + geom_sf()+
   scale_fill_gradient( low = 'white' ,  high = 'dark green')
 ```
+
+```{r}
+dane_bez_sf %>%
+  arrange((desc(wynag)))
+```
+
+Z powyższej tabeli wynika, że największe przeciętne wynagrodzenie w relacji do średniej krajowej brutto jest w powiecie m.Jastrzębie Zdrój.
+
+
+```{r}
+dane_bez_sf %>%
+  arrange(wynag)
+```
+Najmniejsze z kolei w powiecie kępińskim, bo tylko jest to 65,8% średniej krajowej brutto.
+
 
 
 ```{r}
@@ -164,6 +170,16 @@ ggplot(dane_z_sf,aes(fill = absol )) + geom_sf()+
 ```
 
 
+
+
+
+Najwięcej absolwentów uczelni wyższych jest w województwie mazowieckim (60.795). Jest to związane z faktem, że to województwo posiada najwięcej uczelni wyższych w Polsce.
+
+
+
+
+
+Poniżej zostały wyliczone średnie zarobki brutto w relacji do średniej krajowej w poszczególnych województwach. Wynika więc, że największa średnia jest w województwie śląskim (93,40811), a najmniejsze w woj. warmińsko-mazurskim (78,88636).
 
 ```{r}
 # srednie zarobki w wojewodztwie
@@ -186,6 +202,37 @@ ggplot(srednie_zarobki_wojewodztwa,aes(wojewodztwo,srednie_zarobki,group =1)) +
 
 
 ```
+
+
+
+Poniżej przedstawiona jest macierz korelacji, która pokazuje związek pomiędzy poszczególnymi zmiennymi.
+
+```{r}
+# macierz korelacji 
+macierz_korelacji <-cor(dane_bez_sf[sapply(dane_bez_sf,is.numeric)])
+corrplot(macierz_korelacji,method="color")
+# duza dodatnia korelacja miedzy liczba rozwodow a iloscia absolwentów
+# mała dodatnia korelacja miedzy liczbą rozwodów a wynagrodzeniem 
+# mała dodatnia korelacja miedzy liczba absolwentow a wynagrodzeniem
+# mała dodatnia korelacja miedzy praca w finansach a wynagrodzeniem
+```
+
+
+
+Powszechnie uważa się, że osoby, które są wykształcone i dobrze zarabiają dążą do samodzielności i niezależności finasnsowej od współmałżonka. Konflikt interesów i różne priorytety życiowe wpływają na podjęcie decyzji o rzowodzie. Jak silna jest ta zależność przedstawia poniższa analiza:
+
+```{r}
+our_model<-lm(rozwody~wynag+rolnic+przem+handel+finans+poz_usl+absol, data=dane_bez_sf)
+summary(our_model) 
+```
+
+Z powyższego wynika, że zmienne rolnic, handel, finans, poz_usl i absol mogą być uznan jako nieistotne.
+
+```{r}
+plot(our_model)
+```
+
+
 
 
 
